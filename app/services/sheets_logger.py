@@ -124,9 +124,15 @@ class SheetsLogger:
             credentials_str = str(self.credentials_path)
 
             # ถ้าไม่มี { ในตัวแรก แสดงว่าน่าจะเป็น Base64
+            # ถ้าไม่มี { ในตัวแรก แสดงว่าน่าจะเป็น Base64
             if credentials_str and not credentials_str.strip().startswith('{') and not os.path.isfile(credentials_str):
                 try:
                     logger.info("Attempting to decode Base64 credentials")
+                    # เพิ่ม padding ถ้าจำเป็น
+                    missing_padding = len(credentials_str) % 4
+                    if missing_padding:
+                        credentials_str += '=' * (4 - missing_padding)
+                    
                     decoded = base64.b64decode(credentials_str)
                     creds_info = json.loads(decoded)
                     creds = Credentials.from_service_account_info(creds_info, scopes=scope)
