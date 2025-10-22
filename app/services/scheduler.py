@@ -217,10 +217,10 @@ class SignalScheduler:
         
         logger.info("SignalScheduler v2.0 started successfully")
         logger.info("Scheduled jobs:")
-        logger.info(" - 4H signals: every 1 hour at XX:00 UTC")
-        logger.info(" - 1D signals: every 12 hours at 07:00 and 19:00 ICT (00:00 and 12:00 UTC)")
+        logger.info(" - 4H signals: every 15 minutes")
+        logger.info(" - 1D signals: every 4 hours (00:00, 04:00, 08:00, 12:00, 16:00, 20:00 UTC)")
         logger.info(" - Position updates: every 2 minutes (via PositionManager)")
-        logger.info(" - Daily summary: daily at 07:00 ICT (00:00 UTC)")
+        logger.info(" - Daily summary: daily at 00:00 UTC (07:00 ICT)")
         logger.info(f" - Signal cooldown: {self.cooldown_minutes} minutes")
 
     def stop_scheduler(self):
