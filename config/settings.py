@@ -24,7 +24,7 @@ class Config:
     MAX_CONCURRENT_REQUESTS = int(os.getenv("MAX_CONCURRENT_REQUESTS", "10"))
     
     # Refactored service settings
-    SIGNAL_COOLDOWN_MINUTES = 30
+    SIGNAL_COOLDOWN_MINUTES = int(os.getenv("SIGNAL_COOLDOWN_MINUTES", "30"))
     PRICE_MONITOR_INTERVAL = int(os.getenv("PRICE_MONITOR_INTERVAL", "30"))  # seconds
 
     # ================================================================
@@ -44,8 +44,8 @@ class Config:
     # Google Sheets (updated for ConfigManager)
     GOOGLE_SHEETS_ID = os.getenv("GOOGLE_SHEETS_ID", "")
     GOOGLE_SHEETS_CREDENTIALS = os.getenv("GOOGLE_SHEETS_CREDENTIALS", "")
-    GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "/app/credentials.json")
-
+    GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS_BASE64") or os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "/app/credentials.json")
+    
     # ================================================================
     # 💰 LAYER 3: Symbol Selection (COMPLETE - 50 symbols)
     # ================================================================
@@ -133,7 +133,7 @@ class Config:
         "min_signal_strength": int(os.getenv("MIN_SIGNAL_STRENGTH", "70")),
         "require_volume_confirmation": True,
         "min_volume_ratio": float(os.getenv("MIN_VOLUME_RATIO", "1.2")),
-        "cooldown_minutes": int(os.getenv("SIGNAL_COOLDOWN", "30")),
+        "cooldown_minutes": int(os.getenv("SIGNAL_COOLDOWN", "15")),
         "max_signals_per_day": int(os.getenv("MAX_SIGNALS_PER_DAY", "20")),
         "min_24h_volume_usd": int(os.getenv("MIN_24H_VOLUME", "5000000")),
         "min_open_interest_usd": int(os.getenv("MIN_OPEN_INTEREST", "2000000")),
@@ -513,4 +513,4 @@ class Config:
                 "Monitor memory usage with max_memory_mb setting",
                 "Use compression for candle data storage"
             ]
-        }# Force rebuild: 1761105633
+        }
