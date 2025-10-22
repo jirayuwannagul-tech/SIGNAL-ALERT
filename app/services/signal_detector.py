@@ -2,6 +2,7 @@
 
 import logging
 from datetime import datetime
+import time
 from typing import Dict, List, Optional, Tuple
 
 from .indicators import TechnicalIndicators
@@ -509,6 +510,7 @@ class SignalDetector:
                 result = self.analyze_symbol(symbol, timeframe)
                 if result:
                     results.append(result)
+                time.sleep(0.2)
 
         return results
 
