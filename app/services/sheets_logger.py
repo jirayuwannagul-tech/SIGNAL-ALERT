@@ -1,9 +1,10 @@
 """
 Google Sheets Integration for Trading Signal Logging - REFACTORED for v2.0
 Simplified to use ConfigManager for configuration
-FIXED: worksheet attribute error
+FIXED: worksheet attribute error + Base64 credentials support
 """
 
+import base64
 import json
 import logging
 import os
@@ -119,12 +120,25 @@ class SheetsLogger:
 
             logger.info(f"Loading credentials from: {type(self.credentials_path)}")
             
+            # ตรวจสอบว่ามี Base64 credentials ไหม
+            if self.credentials_path and len(str(self.credentials_path)) > 200:
+                # ถ้ายาวมาก น่าจะเป็น Base64
+                try:
+                    logger.info("Decoding Base64 credentials")
+                    decoded = base64.b64decode(self.credentials_path)
+                    creds_info = json.loads(decoded)
+                    creds = Credentials.from_service_account_info(creds_info, scopes=scope)
+                except Exception as e:
+                    logger.error(f"Failed to decode Base64 credentials: {e}")
+                    raise
+
             # Load credentials from file
-            if os.path.isfile(str(self.credentials_path)):
+            elif os.path.isfile(str(self.credentials_path)):
                 logger.info(f"Loading credentials from file: {self.credentials_path}")
                 creds = Credentials.from_service_account_file(
                     self.credentials_path, scopes=scope
                 )
+
             # Load credentials from JSON string/dict
             else:
                 logger.info("Loading credentials from JSON content")
@@ -840,6 +854,7 @@ class SheetsLogger:
 
         except Exception as e:
             logger.error(f"Error logging position update: {e}")
+
             return False
 
     def shutdown(self):
