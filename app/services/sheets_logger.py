@@ -119,21 +119,24 @@ class SheetsLogger:
             ]
 
             logger.info(f"Loading credentials from: {type(self.credentials_path)}")
-            
+
             # ตรวจสอบว่ามี Base64 credentials ไหม
-            if self.credentials_path and len(str(self.credentials_path)) > 200:
-                # ถ้ายาวมาก น่าจะเป็น Base64
+            credentials_str = str(self.credentials_path)
+
+            # ถ้าไม่มี { ในตัวแรก แสดงว่าน่าจะเป็น Base64
+            if credentials_str and not credentials_str.strip().startswith('{') and not os.path.isfile(credentials_str):
                 try:
-                    logger.info("Decoding Base64 credentials")
-                    decoded = base64.b64decode(self.credentials_path)
+                    logger.info("Attempting to decode Base64 credentials")
+                    decoded = base64.b64decode(credentials_str)
                     creds_info = json.loads(decoded)
                     creds = Credentials.from_service_account_info(creds_info, scopes=scope)
+                    logger.info("Successfully loaded Base64 credentials")
                 except Exception as e:
                     logger.error(f"Failed to decode Base64 credentials: {e}")
                     raise
 
             # Load credentials from file
-            elif os.path.isfile(str(self.credentials_path)):
+            elif os.path.isfile(credentials_str):
                 logger.info(f"Loading credentials from file: {self.credentials_path}")
                 creds = Credentials.from_service_account_file(
                     self.credentials_path, scopes=scope
