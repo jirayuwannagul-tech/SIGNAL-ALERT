@@ -28,3 +28,4 @@ pytz==2024.2
 pytest==8.3.4
 pytest-cov==6.0.0
 click==8.1.8gunicorn
+gunicorn
