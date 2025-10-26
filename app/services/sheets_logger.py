@@ -118,18 +118,30 @@ class SheetsLogger:
                 "https://www.googleapis.com/auth/drive",
             ]
 
-            logger.info(f"Loading credentials from: {self.credentials_path}")
+            logger.info(f"Loading credentials type: {type(self.credentials_path)}")
 
-            # โหลดจากไฟล์ตรงๆ (ลบ Base64 ออกหมด)
-            if os.path.isfile(self.credentials_path):
-                logger.info(f"Loading credentials from file: {self.credentials_path}")
+            credentials_str = str(self.credentials_path).strip()
+
+            # ลองโหลดเป็น JSON string ก่อน
+            if credentials_str.startswith('{'):
+                try:
+                    logger.info("Loading credentials from JSON string")
+                    creds_info = json.loads(credentials_str)
+                    creds = Credentials.from_service_account_info(creds_info, scopes=scope)
+                    logger.info("✅ Successfully loaded credentials from JSON string")
+                except json.JSONDecodeError as e:
+                    logger.error(f"Invalid JSON in credentials: {e}")
+                    raise
+            # ถ้าเป็นไฟล์
+            elif os.path.isfile(credentials_str):
+                logger.info(f"Loading credentials from file: {credentials_str}")
                 creds = Credentials.from_service_account_file(
-                    self.credentials_path, scopes=scope
+                    credentials_str, scopes=scope
                 )
                 logger.info("✅ Successfully loaded credentials from file")
             else:
-                logger.error(f"Credentials file not found: {self.credentials_path}")
-                raise FileNotFoundError(f"Credentials file not found: {self.credentials_path}")
+                logger.error(f"Invalid credentials format (not JSON or file): {credentials_str[:100]}")
+                raise ValueError(f"Invalid credentials format")
 
             # Create authorized client
             self.gc = gspread.authorize(creds)
