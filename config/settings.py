@@ -44,8 +44,17 @@ class Config:
     # Google Sheets (updated for ConfigManager)
     GOOGLE_SHEETS_ID = os.getenv("GOOGLE_SHEETS_ID", "")
     GOOGLE_SHEETS_CREDENTIALS = os.getenv("GOOGLE_SHEETS_CREDENTIALS", "")
-    GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_CREDENTIALS_JSON") or os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "/app/credentials.json")
-    
+
+    # Fix: Unescape JSON string
+    creds_json = os.getenv("GOOGLE_CREDENTIALS_JSON", "")
+    if creds_json:
+        # Railway may wrap with quotes, remove them
+        creds_json = creds_json.strip('"')
+        # Replace escaped quotes and newlines
+        creds_json = creds_json.replace('\\"', '"').replace('\\n', '\n')
+
+GOOGLE_APPLICATION_CREDENTIALS = creds_json or os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "/app/credentials.json")
+
     # ================================================================
     # 💰 LAYER 3: Symbol Selection (COMPLETE - 50 symbols)
     # ================================================================
