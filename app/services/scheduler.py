@@ -375,7 +375,7 @@ class SignalScheduler:
             
             # Check for duplicate signals
             if self._is_duplicate_signal(symbol, timeframe, direction):
-                logger.debug(f"Skipping duplicate signal: {symbol} {timeframe} {direction}")
+                logger.info(f"⏭️ SKIPPED DUPLICATE: {symbol} {timeframe} {direction}")
                 return False
             
             # SignalDetector should have already created position if valid
@@ -427,11 +427,11 @@ class SignalScheduler:
             summary = self.position_manager.get_positions_summary()
             active_count = summary.get("active_positions", 0)
             
+            logger.info(f"📍 Checking {active_count} active positions...")
+            
             if active_count == 0:
                 logger.debug("No active positions to update")
                 return
-            
-            logger.debug(f"Updating {active_count} active positions...")
             
             # Trigger PositionManager to update all positions
             updates = self.position_manager.update_positions()
