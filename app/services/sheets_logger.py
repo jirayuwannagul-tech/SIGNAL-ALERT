@@ -118,49 +118,18 @@ class SheetsLogger:
                 "https://www.googleapis.com/auth/drive",
             ]
 
-            logger.info(f"Loading credentials from: {type(self.credentials_path)}")
+            logger.info(f"Loading credentials from: {self.credentials_path}")
 
-            # ตรวจสอบว่ามี Base64 credentials ไหม
-            credentials_str = str(self.credentials_path)
-
-            # ถ้าไม่มี { ในตัวแรก แสดงว่าน่าจะเป็น Base64
-            # ถ้าไม่มี { ในตัวแรก แสดงว่าน่าจะเป็น Base64
-            if credentials_str and not credentials_str.strip().startswith('{') and not os.path.isfile(credentials_str):
-                try:
-                    logger.info("Attempting to decode Base64 credentials")
-                    # เพิ่ม padding ถ้าจำเป็น
-                    missing_padding = len(credentials_str) % 4
-                    if missing_padding:
-                        credentials_str += '=' * (4 - missing_padding)
-                    
-                    decoded = base64.b64decode(credentials_str)
-                    creds_info = json.loads(decoded)
-                    creds = Credentials.from_service_account_info(creds_info, scopes=scope)
-                    logger.info("Successfully loaded Base64 credentials")
-                except Exception as e:
-                    logger.error(f"Failed to decode Base64 credentials: {e}")
-                    raise
-
-            # Load credentials from file
-            elif os.path.isfile(credentials_str):
+            # โหลดจากไฟล์ตรงๆ (ลบ Base64 ออกหมด)
+            if os.path.isfile(self.credentials_path):
                 logger.info(f"Loading credentials from file: {self.credentials_path}")
                 creds = Credentials.from_service_account_file(
                     self.credentials_path, scopes=scope
                 )
-
-            # Load credentials from JSON string/dict
+                logger.info("✅ Successfully loaded credentials from file")
             else:
-                logger.info("Loading credentials from JSON content")
-                if isinstance(self.credentials_path, str):
-                    try:
-                        creds_info = json.loads(self.credentials_path)
-                    except json.JSONDecodeError as e:
-                        logger.error(f"Invalid JSON in credentials: {e}")
-                        raise ValueError(f"Invalid JSON in credentials: {e}")
-                else:
-                    creds_info = self.credentials_path
-
-                creds = Credentials.from_service_account_info(creds_info, scopes=scope)
+                logger.error(f"Credentials file not found: {self.credentials_path}")
+                raise FileNotFoundError(f"Credentials file not found: {self.credentials_path}")
 
             # Create authorized client
             self.gc = gspread.authorize(creds)
@@ -187,9 +156,9 @@ class SheetsLogger:
 
         except Exception as e:
             logger.error(f"Google Sheets initialization error: {e}")
-            logger.error(f"Credentials path type: {type(self.credentials_path)}")
+            logger.error(f"Credentials path: {self.credentials_path}")
             logger.error(f"Spreadsheet ID: {self.spreadsheet_id}")
-            raise
+            raise   
 
     def _ensure_worksheet_exists(self, worksheet_name: str, headers: List[str]) -> Optional[Any]:
         """Ensure worksheet exists with proper headers"""
