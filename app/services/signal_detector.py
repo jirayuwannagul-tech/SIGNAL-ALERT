@@ -248,7 +248,7 @@ class SignalDetector:
     def _detect_signals_improved_fixed(self, analysis: Dict, timeframe: str = "1d", df=None) -> Dict[str, bool]:
         """
         1D: CDC ActionZone (EMA 12/26 Crossover)
-        4H: RSI + MACD + Enhanced filters (7 conditions)
+        4H: RSI + MACD + Enhanced filters + STRONG MOMENTUM MODE
         """
         try:
             import pandas as pd
@@ -314,7 +314,7 @@ class SignalDetector:
                 }
             
             # ========================================
-            # 4H: 5 CONDITIONS (ลบ MA50 + Volume)
+            # 4H: ORIGINAL + STRONG MOMENTUM MODE 🔥
             # ========================================
             else:  # timeframe == "4h"
                 if len(df) < 30:
@@ -333,10 +333,16 @@ class SignalDetector:
                 rsi_prev = df['rsi'].iloc[-2]
                 rsi_ma_prev = df['rsi_ma'].iloc[-2]
                 
-                # MACD
+                # MACD values
                 macd_data = analysis.get("macd", {})
                 macd_cross = macd_data.get("cross_direction", "NONE")
                 macd_line = macd_data.get("macd_line", 0)
+                
+                # 🆕 คำนวณ MACD ค่าก่อนหน้า (สำหรับ Strong Momentum)
+                from ta.trend import MACD
+                macd_indicator = MACD(df['close'], window_slow=17, window_fast=8, window_sign=9)
+                df['macd'] = macd_indicator.macd()
+                macd_prev = df['macd'].iloc[-2] if len(df) > 1 else macd_line
                 
                 # Squeeze
                 squeeze_data = analysis.get("squeeze", {})
@@ -351,40 +357,83 @@ class SignalDetector:
                 rsi_cross_up = (rsi_prev <= rsi_ma_prev) and (rsi_current > rsi_ma_current)
                 rsi_cross_down = (rsi_prev >= rsi_ma_prev) and (rsi_current < rsi_ma_current)
                 
-                # 4H Signals (5 conditions)
-                buy_signal = (
+                # ========================================
+                # 🔥 ORIGINAL SIGNALS (Crossover Based)
+                # ========================================
+                original_buy = (
                     rsi_cross_up and 
                     macd_cross == "UP" and 
                     macd_line > 0 and
                     squeeze_off
                 )
                 
-                short_signal = (
+                original_short = (
                     rsi_cross_down and 
                     macd_cross == "DOWN" and 
                     macd_line < 0 and
                     squeeze_off
                 )
                 
-                # Log
-                if buy_signal:
+                # ========================================
+                # 🔥 STRONG MOMENTUM MODE (Continuation)
+                # ========================================
+                strong_momentum_buy = (
+                    rsi_current > 70 and           # RSI overbought มาก
+                    rsi_current > rsi_prev and     # RSI ยังขึ้นต่อ
+                    macd_line > 100 and            # MACD บวกลึก
+                    macd_line > macd_prev and      # MACD ยังขึ้นต่อ
+                    squeeze_off                     # Squeeze OFF
+                )
+                
+                strong_momentum_short = (
+                    rsi_current < 30 and           # RSI oversold มาก
+                    rsi_current < rsi_prev and     # RSI ยังลงต่อ
+                    macd_line < -100 and           # MACD ติดลบลึก
+                    macd_line < macd_prev and      # MACD ยังลงต่อ
+                    squeeze_off                     # Squeeze OFF
+                )
+                
+                # ========================================
+                # รวมเงื่อนไข: Original OR Strong Momentum
+                # ========================================
+                buy_signal = original_buy or strong_momentum_buy
+                short_signal = original_short or strong_momentum_short
+                
+                # ========================================
+                # 📊 LOGGING
+                # ========================================
+                if original_buy:
                     logger.info(
-                        f"🟢 4H LONG | "
+                        f"🟢 4H LONG (Crossover) | "
                         f"RSI: {rsi_prev:.2f}→{rsi_current:.2f} | "
                         f"MACD: {macd_cross} ({macd_line:.6f}) | "
                         f"Squeeze: OFF"
                     )
-                elif short_signal:
+                elif strong_momentum_buy:
                     logger.info(
-                        f"🔴 4H SHORT | "
+                        f"🔥 4H LONG (Strong Momentum) | "
+                        f"RSI: {rsi_current:.2f} (rising, >70) | "
+                        f"MACD: {macd_line:.6f} (rising, >100) | "
+                        f"Squeeze: OFF"
+                    )
+                elif original_short:
+                    logger.info(
+                        f"🔴 4H SHORT (Crossover) | "
                         f"RSI: {rsi_prev:.2f}→{rsi_current:.2f} | "
                         f"MACD: {macd_cross} ({macd_line:.6f}) | "
+                        f"Squeeze: OFF"
+                    )
+                elif strong_momentum_short:
+                    logger.info(
+                        f"🔥 4H SHORT (Strong Momentum) | "
+                        f"RSI: {rsi_current:.2f} (falling, <30) | "
+                        f"MACD: {macd_line:.6f} (falling, <-100) | "
                         f"Squeeze: OFF"
                     )
                 else:
                     logger.debug(
                         f"4H No signal | RSI: {rsi_current:.2f}, "
-                        f"MACD: {macd_cross}, Squeeze: {squeeze_off}"
+                        f"MACD: {macd_cross} ({macd_line:.6f}), Squeeze: {squeeze_off}"
                     )
                 
                 return {
