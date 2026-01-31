@@ -58,43 +58,49 @@ class LineNotifier:
 
     def send_signal_alert(self, analysis: Dict) -> bool:
         """
-        Send trading signal alert to LINE
-        
-        Args:
-            analysis: Complete signal analysis from SignalDetector
-            
-        Returns:
-            bool: True if message sent successfully
+        ส่งสัญญาณไปที่ LINE และ Relay ข้อมูลให้จ่าเฉย (JaCheyBot) อัตโนมัติ
         """
         try:
             if not self.line_bot_api or not self.user_id:
-                logger.warning("LINE not properly configured, cannot send signal alert")
+                logger.warning("LINE not properly configured")
                 return False
 
-            # Check for valid signals
             signals = analysis.get("signals", {})
             recommendation = analysis.get("recommendation", "")
 
+            # ถ้าบอทหลักยืนยันว่าเป็นไม้ที่ควรเปิด (LONG หรือ SHORT)
             if signals.get("buy") or signals.get("short"):
-                # Create entry signal message
+                
+                # 1. ส่งข้อความแจ้งเตือนสีเขียว/แดงเข้ากลุ่ม LINE พี่ (เหมือนเดิม)
                 message = self._create_entry_signal_message(analysis)
-            else:
-                # No relevant signal to send
-                logger.debug(f"No tradeable signal found for {analysis.get('symbol', 'UNKNOWN')}")
-                return False
+                self.line_bot_api.push_message(self.user_id, TextSendMessage(text=message))
+                
+                # 2. 🔥 ส่งต่อข้อมูลให้จ่าเฉยเฝ้าต่อ (สายตรงออโต้)
+                try:
+                    import requests
+                    jachey_url = "https://web-production-e26a7.up.railway.app/receive-signal"
+                    
+                    payload = {
+                        "symbol": analysis.get("symbol"),
+                        "recommendation": recommendation, # LONG หรือ SHORT
+                        "current_price": analysis.get("current_price"),
+                        "risk_levels": {
+                            "take_profit_1": analysis.get("risk_levels", {}).get("take_profit_1"),
+                            "take_profit_2": analysis.get("risk_levels", {}).get("take_profit_2"),
+                            "take_profit_3": analysis.get("risk_levels", {}).get("take_profit_3"),
+                            "stop_loss": analysis.get("risk_levels", {}).get("stop_loss")
+                        }
+                    }
+                    # ยิง POST ไปหาจ่าเฉย
+                    requests.post(jachey_url, json=payload, timeout=10)
+                    logger.info(f"✅ ยิงซิก {analysis.get('symbol')} ให้จ่าเฉยรับช่วงต่อแล้ว")
+                except Exception as e:
+                    logger.error(f"❌ ระบบเชื่อมต่อจ่าเฉยขัดข้อง: {e}")
 
-            # Send message
-            self.line_bot_api.push_message(self.user_id, TextSendMessage(text=message))
-            logger.info(
-                f"Signal alert sent for {analysis.get('symbol')} - {recommendation}"
-            )
-            return True
-
-        except LineBotApiError as e:
-            logger.error(f"LINE API error: {e}")
+                return True
             return False
         except Exception as e:
-            logger.error(f"Error sending signal alert: {e}")
+            logger.error(f"Error: {e}")
             return False
 
     def send_position_update(self, update_data: Dict) -> bool:
